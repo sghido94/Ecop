@@ -1,0 +1,24 @@
+{
+  "entities": {
+    "Message": {
+      "title": "Message",
+      "description": "A contact message sent via the website form.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Sender's name" },
+        "email": { "type": "string", "format": "email", "description": "Sender's email address" },
+        "subject": { "type": "string", "description": "Message subject" },
+        "body": { "type": "string", "description": "Message content" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of creation" },
+        "status": { "type": "string", "enum": ["unread", "read", "archived"], "description": "Message status" }
+      },
+      "required": ["name", "email", "subject", "body", "createdAt", "status"]
+    }
+  },
+  "firestore": {
+    "/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Collection of contact messages."
+    }
+  }
+}

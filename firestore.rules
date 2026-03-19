@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: messages
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required, max 100 chars)
+    //   - email: string (required, valid email)
+    //   - subject: string (required, max 200 chars)
+    //   - body: string (required, max 2000 chars)
+    //   - createdAt: timestamp (required, immutable)
+    //   - status: string (required, enum: ['unread', 'read', 'archived'])
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             request.auth.token.email == "guidomacchilotan@gmail.com" && 
+             request.auth.token.email_verified == true;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidMessage(data) {
+      return hasOnlyAllowedFields(['name', 'email', 'subject', 'body', 'createdAt', 'status']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.subject is string && data.subject.size() > 0 && data.subject.size() <= 200 &&
+             data.body is string && data.body.size() > 0 && data.body.size() <= 2000 &&
+             data.createdAt is timestamp &&
+             data.status in ['unread', 'read', 'archived'];
+    }
+
+    match /messages/{messageId} {
+      // Anyone can create a message (contact form)
+      allow create: if isValidMessage(request.resource.data) && request.resource.data.status == 'unread';
+      
+      // Only admins can read, update, or delete messages
+      allow read, delete: if isAdmin();
+      allow update: if isAdmin() && 
+                       isValidMessage(request.resource.data) &&
+                       request.resource.data.createdAt == resource.data.createdAt;
+    }
+  }
+}
